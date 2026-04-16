@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import LeaderboardManager from "../managers/LeaderboardManager.js";
+import GlobalLeaderboard from "../managers/GlobalLeaderboard.js";
 import { GAME_WIDTH, GAME_HEIGHT } from "../constants.js";
 
 const MESSAGES = [
@@ -157,12 +158,20 @@ export default class GameOverScene extends Phaser.Scene {
     if (this.submitted) return;
     this.submitted = true;
 
+    const name = this.nameValue || "ANON";
+    const d = this.runData;
+
+    // Save locally
     const entry = this.leaderboard.addEntry({
-      name: this.nameValue || "ANON",
-      score: this.runData.score,
-      highestTitle: this.runData.highestTitle,
-      timeSurvivedMs: this.runData.timeSurvivedMs,
-      demotions: this.runData.demotions
+      name, score: d.score, highestTitle: d.highestTitle,
+      timeSurvivedMs: d.timeSurvivedMs, demotions: d.demotions
+    });
+
+    // Submit globally (fire and forget)
+    GlobalLeaderboard.submit({
+      name, score: d.score, highestTitle: d.highestTitle,
+      highestFloor: d.highestFloor, timeSurvivedMs: d.timeSurvivedMs,
+      demotions: d.demotions, maxMultiplier: d.maxMultiplier
     });
 
     this.scene.start("LeaderboardScene", {

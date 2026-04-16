@@ -1,0 +1,8 @@
+name = "ladder-climber-api"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ladder-climber-db"
+database_id = "314c2a1a-cdb4-4d37-afd0-a471e6b8cfe7"
