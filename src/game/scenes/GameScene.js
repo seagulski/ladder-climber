@@ -275,7 +275,7 @@ export default class GameScene extends Phaser.Scene {
     this.updateCareer();
 
     // --- Achievements ---
-    this.achievementManager.updateTime(time);
+    this.achievementManager.updateTime(time, Math.floor(this.player.score));
     // Track lane changes
     if (this.player.currentLane !== this.lastPlayerLane) {
       this.achievementManager.onLaneChange(this.player.currentLane, time);

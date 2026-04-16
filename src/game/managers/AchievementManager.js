@@ -107,9 +107,10 @@ export default class AchievementManager {
     this.check(time);
   }
 
-  updateTime(time) {
+  updateTime(time, score) {
     const streak = time - this.stats.noHitStart;
     if (streak > this.stats.longestNoHitMs) this.stats.longestNoHitMs = streak;
+    if (score !== undefined) this.stats.score = score;
     this.check(time);
   }
 
@@ -147,6 +148,9 @@ export default class AchievementManager {
           break;
         case "floorAtLeast":
           pass = this.stats.highestFloor >= a.value;
+          break;
+        case "scoreAtLeast":
+          pass = this.stats.score >= a.value;
           break;
       }
 
@@ -200,7 +204,7 @@ export default class AchievementManager {
 
     // Wellness Initiative — 3 different powerup types
     if (!this.globalUnlocked["wellness_initiative"] && !this.runIds.has("wellness_initiative")) {
-      if (this.stats.powerupTypes.size >= 3) {
+      if (this.stats.powerupTypes.size >= 4) {
         const a = ACHIEVEMENTS.find(x => x.id === "wellness_initiative");
         if (a) this.unlock(a);
       }
