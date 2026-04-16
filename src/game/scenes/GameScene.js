@@ -11,6 +11,7 @@ import { getStageForVisibility, getNextStage, CAREER_STAGES } from "../data/titl
 import {
   GAME_WIDTH,
   GAME_HEIGHT,
+  HUD_HEIGHT,
   LANES,
   BASE_SCROLL_SPEED,
   VISIBILITY_COFFEE_BONUS,
@@ -96,63 +97,61 @@ export default class GameScene extends Phaser.Scene {
     // Paused state (during demotion scene)
     this.isPaused = false;
 
-    // --- HUD ---
-    this.titleText = this.add.text(16, 16, this.currentStage.title, {
-      fontFamily: "monospace",
-      fontSize: "13px",
-      color: "#ffffff"
-    }).setScrollFactor(0).setDepth(100);
+    // === HUD PANEL (fixed bar at top, outside gameplay) ===
+    const hudBg = this.add.rectangle(GAME_WIDTH / 2, HUD_HEIGHT / 2, GAME_WIDTH, HUD_HEIGHT, 0x0a0814)
+      .setScrollFactor(0).setDepth(300);
+    // Bottom border
+    this.add.rectangle(GAME_WIDTH / 2, HUD_HEIGHT, GAME_WIDTH, 1, 0x2a2838)
+      .setScrollFactor(0).setDepth(301);
 
-    this.scoreText = this.add.text(GAME_WIDTH - 16, 16, "0", {
-      fontFamily: "monospace",
-      fontSize: "16px",
-      color: "#00ffcc"
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+    // Title (left)
+    this.titleText = this.add.text(8, 6, this.currentStage.title, {
+      fontFamily: "monospace", fontSize: "11px", color: "#ffffff"
+    }).setScrollFactor(0).setDepth(310);
 
-    this.multiplierText = this.add.text(GAME_WIDTH - 16, 36, "1.0x", {
-      fontFamily: "monospace",
-      fontSize: "11px",
-      color: "#888888"
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+    // Visibility bar (under title)
+    this.visBarBg = this.add.rectangle(8, 22, 140, 4, COLORS.hudBarBg)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(310);
+    this.visBar = this.add.rectangle(8, 22, 1, 4, COLORS.hudBar)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(311);
 
-    this.floorText = this.add.text(GAME_WIDTH / 2, 16, "FLOOR 1", {
-      fontFamily: "monospace",
-      fontSize: "10px",
-      color: "#666666"
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100);
-
-    // Visibility bar
-    this.visBarBg = this.add.rectangle(16, 38, 160, 6, COLORS.hudBarBg)
-      .setOrigin(0, 0).setScrollFactor(0).setDepth(100);
-    this.visBar = this.add.rectangle(16, 38, 1, 6, COLORS.hudBar)
-      .setOrigin(0, 0).setScrollFactor(0).setDepth(101);
-
-    // Demotions remaining indicator
+    // Demotion dots (under vis bar)
     this.demotionDots = [];
     for (let i = 0; i < 3; i++) {
-      const dot = this.add.rectangle(16 + i * 14, 50, 8, 8, 0x00ffcc)
-        .setOrigin(0, 0).setScrollFactor(0).setDepth(100);
+      const dot = this.add.rectangle(8 + i * 12, 30, 7, 7, 0x00ffcc)
+        .setOrigin(0, 0).setScrollFactor(0).setDepth(310);
       this.demotionDots.push(dot);
     }
 
-    // Zone label
-    this.zoneLabelText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, "", {
-      fontFamily: "monospace",
-      fontSize: "16px",
-      color: "#ffffff",
+    // Floor (center)
+    this.floorText = this.add.text(GAME_WIDTH / 2, 8, "FLOOR 1", {
+      fontFamily: "monospace", fontSize: "9px", color: "#555555"
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(310);
+
+    // Score (right)
+    this.scoreText = this.add.text(GAME_WIDTH - 8, 6, "0", {
+      fontFamily: "monospace", fontSize: "14px", color: "#00ffcc"
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(310);
+
+    // Multiplier (under score)
+    this.multiplierText = this.add.text(GAME_WIDTH - 8, 24, "1.0x", {
+      fontFamily: "monospace", fontSize: "10px", color: "#666666"
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(310);
+
+    // Zone label (center of gameplay area)
+    this.zoneLabelText = this.add.text(GAME_WIDTH / 2, HUD_HEIGHT + (GAME_HEIGHT - HUD_HEIGHT) * 0.35, "", {
+      fontFamily: "monospace", fontSize: "16px", color: "#ffffff",
       backgroundColor: "#1a1828",
       padding: { left: 12, right: 12, top: 8, bottom: 8 }
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
 
     // Promotion toast
-    this.promotionText = this.add.text(GAME_WIDTH / 2, 70, "", {
-      fontFamily: "monospace",
-      fontSize: "12px",
-      color: "#ffcc00"
+    this.promotionText = this.add.text(GAME_WIDTH / 2, HUD_HEIGHT + 20, "", {
+      fontFamily: "monospace", fontSize: "12px", color: "#ffcc00"
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
 
     // Achievement toast
-    this.achievementToast = this.add.text(GAME_WIDTH / 2, 90, "", {
+    this.achievementToast = this.add.text(GAME_WIDTH / 2, HUD_HEIGHT + 40, "", {
       fontFamily: "monospace", fontSize: "10px", color: "#ffcc00",
       backgroundColor: "#1a1628",
       padding: { left: 8, right: 8, top: 4, bottom: 4 }
@@ -160,22 +159,23 @@ export default class GameScene extends Phaser.Scene {
 
     this.lastAchievementCount = 0;
 
-    // Warning indicators — one per lane at top of screen
+    // === WARNING BEACONS (just below HUD, per lane) ===
     this.warnings = [];
     for (let i = 0; i < 4; i++) {
-      // Convert lane world-x to screen-x (lanes are in world space but warnings are HUD)
-      const indicator = this.add.triangle(0, 0, 0, 0, 6, 12, -6, 12, 0xff4444)
+      const indicator = this.add.triangle(0, 0, 0, 0, 7, 14, -7, 14, 0xff4444)
         .setScrollFactor(0).setDepth(99).setAlpha(0);
-      // We'll position these dynamically based on lane positions
       this.warnings.push(indicator);
     }
+
+    // === HAZARD NAME TAGS (flowing down right side) ===
+    this.hazardTags = [];
 
     // CRT scanline overlay
     this.createCRTOverlay();
 
     // Corporate message ticker
-    this.tickerText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 24, "", {
-      fontFamily: "monospace", fontSize: "9px", color: "#555555"
+    this.tickerText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 16, "", {
+      fontFamily: "monospace", fontSize: "8px", color: "#444444"
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setAlpha(0);
     this.nextTickerTime = 8000;
     this.promotionCount = 0;
@@ -268,8 +268,9 @@ export default class GameScene extends Phaser.Scene {
     }
     this.checkPowerupCollisions();
 
-    // --- Warnings ---
+    // --- Warnings + Hazard Tags ---
     this.updateWarnings();
+    this.updateHazardTags();
 
     // --- Career ---
     this.updateCareer();
@@ -556,12 +557,12 @@ export default class GameScene extends Phaser.Scene {
   showPromotion(title) {
     this.promotionText.setText(`PROMOTED — ${title}`);
     this.promotionText.setAlpha(1);
-    this.promotionText.y = 70;
+    this.promotionText.y = HUD_HEIGHT + 20;
 
     this.tweens.add({
       targets: this.promotionText,
       alpha: 0,
-      y: 55,
+      y: HUD_HEIGHT + 10,
       duration: 2200,
       ease: "Power2"
     });
@@ -605,12 +606,12 @@ export default class GameScene extends Phaser.Scene {
     this.sound_mgr.achievement();
     this.achievementToast.setText(`ACHIEVEMENT — ${name}`);
     this.achievementToast.setAlpha(1);
-    this.achievementToast.y = 90;
+    this.achievementToast.y = HUD_HEIGHT + 40;
 
     this.tweens.add({
       targets: this.achievementToast,
       alpha: 0,
-      y: 80,
+      y: HUD_HEIGHT + 30,
       duration: 2500,
       delay: 1200,
       ease: "Power2"
@@ -619,11 +620,12 @@ export default class GameScene extends Phaser.Scene {
 
   updateWarnings() {
     const cameraTop = this.cameraY;
-    const warningRange = 600; // how far ahead to look
+    const warningRange = 600;
     const warningZoneTop = cameraTop - warningRange;
     const warningZoneBottom = cameraTop;
+    const beaconY = HUD_HEIGHT + 8; // just below the HUD bar
 
-    // Only warn about moving hazards (slack_storm etc)
+    // Warning beacons per lane for moving hazards
     for (let i = 0; i < LANES.length; i++) {
       const laneX = LANES[i];
       let closestDist = Infinity;
@@ -646,16 +648,71 @@ export default class GameScene extends Phaser.Scene {
       const indicator = this.warnings[i];
       if (closestDist < Infinity) {
         const proximity = 1 - (closestDist / warningRange);
-        const alpha = 0.15 + proximity * 0.75;
-        const scale = 0.3 + proximity * 1.8;
+        const alpha = 0.15 + proximity * 0.8;
+        const scale = 0.4 + proximity * 2.0;
 
         indicator.setAlpha(alpha);
         indicator.setScale(scale);
-        indicator.setPosition(laneX, 68 + (1 - proximity) * 8);
+        indicator.setPosition(laneX, beaconY + (1 - proximity) * 6);
         indicator.setFillStyle(closestColor);
       } else {
         indicator.setAlpha(0);
       }
+    }
+  }
+
+  updateHazardTags() {
+    // Clean up old tags that scrolled off screen
+    for (let i = this.hazardTags.length - 1; i >= 0; i--) {
+      const tag = this.hazardTags[i];
+      if (!tag.active || tag.alpha <= 0) {
+        tag.destroy();
+        this.hazardTags.splice(i, 1);
+      }
+    }
+
+    // Create tags for hazards approaching the visible area
+    const cameraTop = this.cameraY;
+    const tagZoneTop = cameraTop - 400;
+    const tagZoneBottom = cameraTop + 50;
+    const rightEdge = GAME_WIDTH - 6;
+
+    for (const hazard of this.obstacleManager.hazards) {
+      if (!hazard.active) continue;
+      if (hazard.getData("tagged")) continue; // already has a tag
+      if (hazard.y < tagZoneTop || hazard.y > tagZoneBottom) continue;
+
+      // Mark as tagged so we don't create duplicates
+      hazard.setData("tagged", true);
+
+      const type = hazard.getData("type") || "???";
+      // Convert type key to display label
+      const label = type.replace(/_/g, " ").toUpperCase();
+      const color = hazard.fillColor || 0xff4444;
+      const colorStr = "#" + color.toString(16).padStart(6, "0");
+
+      // Create flowing tag on right side — starts above screen, drifts down
+      const screenY = HUD_HEIGHT + 20 + Math.random() * 60;
+      const tag = this.add.text(rightEdge, screenY, label, {
+        fontFamily: "monospace",
+        fontSize: "7px",
+        color: colorStr,
+        alpha: 0.7
+      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(90);
+
+      // Drift down and fade
+      this.tweens.add({
+        targets: tag,
+        y: screenY + 200 + Math.random() * 300,
+        alpha: 0,
+        duration: 4000 + Math.random() * 2000,
+        ease: "Linear",
+        onComplete: () => {
+          if (tag.active) tag.destroy();
+        }
+      });
+
+      this.hazardTags.push(tag);
     }
   }
 

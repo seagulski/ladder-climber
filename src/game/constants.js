@@ -1,5 +1,6 @@
 export const GAME_WIDTH = 432;
 export const GAME_HEIGHT = 768;
+export const HUD_HEIGHT = 52; // fixed panel at top
 
 // 4 lane positions (x coordinates)
 export const LANES = [72, 168, 264, 360];
