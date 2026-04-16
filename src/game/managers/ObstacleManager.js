@@ -1,64 +1,78 @@
-import { PATTERNS } from "../data/patterns.js";
+import { PATTERNS, ZONE_HAZARD_POOLS } from "../data/patterns.js";
 import { LANES, LANE_COUNT, GAME_HEIGHT } from "../constants.js";
 
-// --- All 8 hazard types ---
+// --- 30 hazard variants across 7 behavior families ---
 const HAZARD_CONFIGS = {
-  meeting_block: {
-    width: 40, height: 24, color: 0xff4444, label: "MTG",
-    behavior: "static"
-  },
-  slack_storm: {
-    width: 32, height: 32, color: 0x7b68ee, label: "SLAK",
-    behavior: "moving", velocityY: 12
-  },
-  glass_ceiling: {
-    width: 56, height: 10, color: 0x88ccff, label: "",
-    behavior: "static", alpha: 0.7
-  },
-  buzzword_cloud: {
-    width: 36, height: 20, color: 0x55aa77, label: "BUZZ",
-    behavior: "static"
-  },
-  reply_all: {
-    width: 28, height: 28, color: 0xff8844, label: "RE:",
-    behavior: "moving", velocityY: 8
-  },
-  budget_cut: {
-    width: 80, height: 14, color: 0xcc3333, label: "BUDGET CUT",
-    behavior: "wide"  // spans two lanes
-  },
-  reorg_wave: {
-    width: 44, height: 22, color: 0xdd44aa, label: "REORG",
-    behavior: "delayed", delay: 1200  // telegraphs then activates
-  },
-  executive_veto: {
-    width: 48, height: 18, color: 0xaa22cc, label: "VETO",
-    behavior: "delayed", delay: 800
-  }
+  // === STATIC BLOCKERS (sit on a lane, must dodge) ===
+  meeting_block: { width: 40, height: 24, color: 0xff4444, label: "MTG", behavior: "static" },
+  recurring_sync: { width: 40, height: 24, color: 0xee3333, label: "SYNC", behavior: "static" },
+  agenda_free: { width: 38, height: 22, color: 0xdd4444, label: "???", behavior: "static" },
+  calendar_conflict: { width: 42, height: 24, color: 0xcc3344, label: "CAL!", behavior: "static" },
+  approval_bottleneck: { width: 44, height: 26, color: 0xbb4433, label: "WAIT", behavior: "static" },
+  performance_review: { width: 42, height: 24, color: 0xcc2244, label: "REVW", behavior: "static" },
+
+  // === MOVING HAZARDS (drift downward, read trajectory) ===
+  slack_storm: { width: 32, height: 32, color: 0x7b68ee, label: "SLAK", behavior: "moving", velocityY: 12 },
+  reply_all: { width: 28, height: 28, color: 0xff8844, label: "RE:", behavior: "moving", velocityY: 8 },
+  notification_burst: { width: 26, height: 26, color: 0x8877ee, label: "PING", behavior: "moving", velocityY: 14 },
+  email_chain: { width: 30, height: 28, color: 0xee7733, label: "FWD:", behavior: "moving", velocityY: 10 },
+  urgent_request: { width: 28, height: 28, color: 0xff5555, label: "ASAP", behavior: "moving", velocityY: 16 },
+  late_night_ping: { width: 24, height: 24, color: 0x6655cc, label: "11PM", behavior: "moving", velocityY: 11 },
+
+  // === GLASS CEILINGS (signature lane-forcing barrier) ===
+  glass_ceiling: { width: 56, height: 10, color: 0x88ccff, label: "", behavior: "static", alpha: 0.7 },
+  invisible_barrier: { width: 56, height: 8, color: 0x6699cc, label: "", behavior: "static", alpha: 0.4 },
+  promotion_freeze: { width: 56, height: 12, color: 0x99bbdd, label: "FRZN", behavior: "static", alpha: 0.6 },
+
+  // === SOFT BLOCKERS (weaker, less threatening) ===
+  buzzword_cloud: { width: 36, height: 20, color: 0x55aa77, label: "BUZZ", behavior: "static" },
+  corporate_jargon: { width: 38, height: 20, color: 0x44bb66, label: "JRGN", behavior: "static" },
+  synergy_vortex: { width: 34, height: 22, color: 0x55cc88, label: "SNRG", behavior: "static" },
+  innovation_theater: { width: 40, height: 20, color: 0x44aa77, label: "INNV", behavior: "static" },
+  values_poster: { width: 36, height: 18, color: 0x66bb88, label: "VALS", behavior: "static" },
+
+  // === WIDE BARRIERS (span two lanes) ===
+  budget_cut: { width: 80, height: 14, color: 0xcc3333, label: "BUDGET CUT", behavior: "wide" },
+  layoff_wave: { width: 80, height: 16, color: 0xdd2222, label: "LAYOFFS", behavior: "wide" },
+  hiring_freeze: { width: 80, height: 14, color: 0xbb4444, label: "FREEZE", behavior: "wide" },
+
+  // === DELAYED TRIGGERS (telegraph then solidify) ===
+  reorg_wave: { width: 44, height: 22, color: 0xdd44aa, label: "REORG", behavior: "delayed", delay: 1200 },
+  executive_veto: { width: 48, height: 18, color: 0xaa22cc, label: "VETO", behavior: "delayed", delay: 800 },
+  strategic_reset: { width: 46, height: 20, color: 0xcc33bb, label: "RESET", behavior: "delayed", delay: 1000 },
+  priority_shift: { width: 42, height: 20, color: 0xbb44aa, label: "SHIFT", behavior: "delayed", delay: 900 },
+  scope_creep: { width: 44, height: 22, color: 0xaa3399, label: "SCOPE", behavior: "delayed", delay: 1100 }
 };
 
-// --- All 5 powerup types ---
+// --- 20 powerup types across 4 tiers ---
 const POWERUP_CONFIGS = {
-  coffee: {
-    width: 16, height: 20, color: 0xffaa00, label: "☕",
-    effect: "speed"
-  },
-  headphones: {
-    width: 18, height: 16, color: 0x44ccff, label: "🎧",
-    effect: "shield"
-  },
-  focus_block: {
-    width: 20, height: 18, color: 0x44ff88, label: "📅",
-    effect: "clear_lane"
-  },
-  promotion_letter: {
-    width: 16, height: 20, color: 0xffdd44, label: "📜",
-    effect: "promote"
-  },
-  pto_shield: {
-    width: 18, height: 18, color: 0x66ddff, label: "🏖️",
-    effect: "invuln"
-  }
+  // Common — Movement/Survival (spawn frequently)
+  coffee: { width: 16, height: 20, color: 0xffaa00, label: "☕", effect: "speed", tier: 1 },
+  double_espresso: { width: 16, height: 20, color: 0xff8800, label: "☕☕", effect: "speed_strong", tier: 1 },
+  energy_drink: { width: 14, height: 20, color: 0x44ff44, label: "⚡", effect: "speed", tier: 1 },
+  standing_desk: { width: 18, height: 16, color: 0x88cc66, label: "🪑", effect: "speed", tier: 1 },
+  stretch_break: { width: 16, height: 16, color: 0x66ddaa, label: "🧘", effect: "speed", tier: 1 },
+
+  // Uncommon — Defensive (spawn less often)
+  headphones: { width: 18, height: 16, color: 0x44ccff, label: "🎧", effect: "shield", tier: 2 },
+  focus_block: { width: 20, height: 18, color: 0x44ff88, label: "📅", effect: "clear_lane", tier: 2 },
+  slack_mute: { width: 16, height: 16, color: 0x6688cc, label: "🔇", effect: "shield", tier: 2 },
+  ooo_reply: { width: 18, height: 16, color: 0x88aadd, label: "✈️", effect: "shield", tier: 2 },
+  email_filter: { width: 16, height: 16, color: 0x77bbcc, label: "📧", effect: "shield", tier: 2 },
+  calendar_shield: { width: 18, height: 18, color: 0x55cc99, label: "🛡️", effect: "shield", tier: 2 },
+  scope_lock: { width: 16, height: 16, color: 0x99aa55, label: "🔒", effect: "clear_lane", tier: 2 },
+
+  // Rare — Career/Score boosts
+  promotion_letter: { width: 16, height: 20, color: 0xffdd44, label: "📜", effect: "promote", tier: 3 },
+  mentor_guidance: { width: 18, height: 18, color: 0xddaa44, label: "🧑‍🏫", effect: "promote", tier: 3 },
+  performance_bonus: { width: 16, height: 16, color: 0xffcc00, label: "💰", effect: "score_boost", tier: 3 },
+  recognition_award: { width: 18, height: 18, color: 0xffaa33, label: "🏆", effect: "score_boost", tier: 3 },
+  visibility_multiplier: { width: 16, height: 16, color: 0xffee44, label: "👁️", effect: "vis_boost", tier: 3 },
+
+  // Legendary — Game-changing (very rare)
+  pto_shield: { width: 18, height: 18, color: 0x66ddff, label: "🏖️", effect: "invuln", tier: 4 },
+  exit_package: { width: 20, height: 18, color: 0xff66aa, label: "📦", effect: "extra_life", tier: 4 },
+  sabbatical: { width: 20, height: 20, color: 0xaa88ff, label: "🌴", effect: "invuln_long", tier: 4 }
 };
 
 export default class ObstacleManager {
@@ -190,11 +204,14 @@ export default class ObstacleManager {
     // Resolve lanes
     const resolved = this.resolveLanes(pattern.safeLaneCount);
 
-    // Spawn hazards
+    // Spawn hazards — resolve category to specific type from zone pool
+    const zoneId = floorData.zone.id;
     for (const hazard of pattern.hazards) {
       const x = this.resolveLaneRef(hazard.laneRef, resolved);
       if (x == null) continue;
-      this.createHazard(x, y + (hazard.yOffset || 0), hazard.type, time);
+      const type = hazard.type || this.resolveHazardType(hazard.category, zoneId);
+      if (!type) continue;
+      this.createHazard(x, y + (hazard.yOffset || 0), type, time);
     }
 
     // Spawn pattern powerups
@@ -217,14 +234,17 @@ export default class ObstacleManager {
   spawnRandomPowerup(y, config, forceLane) {
     const lane = forceLane || LANES[Math.floor(Math.random() * LANES.length)];
 
-    // Weight powerup type by rarity
+    // Tier-weighted selection: common=50%, uncommon=30%, rare=15%, legendary=5%
     const roll = Math.random();
-    let type;
-    if (roll < 0.45) type = "coffee";
-    else if (roll < 0.65) type = "headphones";
-    else if (roll < 0.80) type = "focus_block";
-    else if (roll < 0.92) type = "promotion_letter";
-    else type = "pto_shield";
+    let tier;
+    if (roll < 0.50) tier = 1;
+    else if (roll < 0.80) tier = 2;
+    else if (roll < 0.95) tier = 3;
+    else tier = 4;
+
+    // Pick random powerup from that tier
+    const keys = Object.keys(POWERUP_CONFIGS).filter(k => POWERUP_CONFIGS[k].tier === tier);
+    const type = keys[Math.floor(Math.random() * keys.length)];
 
     this.createPowerup(lane, y, type);
   }
@@ -251,6 +271,13 @@ export default class ObstacleManager {
 
   resolveLaneRef(ref, resolved) {
     return resolved.refs[ref] ?? null;
+  }
+
+  resolveHazardType(category, zoneId) {
+    const pool = ZONE_HAZARD_POOLS[zoneId] || ZONE_HAZARD_POOLS.basement;
+    const options = pool[category];
+    if (!options || options.length === 0) return "meeting_block"; // fallback
+    return options[Math.floor(Math.random() * options.length)];
   }
 
   createHazard(x, y, type, time) {

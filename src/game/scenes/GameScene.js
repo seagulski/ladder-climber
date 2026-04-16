@@ -452,29 +452,55 @@ export default class GameScene extends Phaser.Scene {
         this.player.addScore(10);
         break;
 
+      case "speed_strong":
+        this.player.activateCoffee();
+        this.player.coffeeTimer = 5000; // longer duration
+        this.player.addVisibility(VISIBILITY_COFFEE_BONUS * 1.5);
+        this.player.addScore(15);
+        break;
+
       case "shield":
-        // Headphones — grant grace period (immune to hits)
         this.player.graceTimer = 5000;
         this.player.addScore(15);
         break;
 
       case "clear_lane":
-        // Focus Block — destroy all hazards in player's current lane
         this.clearPlayerLane();
         this.player.addScore(20);
         break;
 
       case "promote":
-        // Promotion Letter — big visibility boost
         this.player.addVisibility(60);
         this.player.addScore(50);
         break;
 
+      case "score_boost":
+        this.player.addScore(200);
+        this.player.bumpMultiplier(0.3);
+        break;
+
+      case "vis_boost":
+        this.player.addVisibility(40);
+        this.player.addScore(25);
+        break;
+
       case "invuln":
-        // PTO Shield — longer grace + speed boost
         this.player.graceTimer = 8000;
         this.player.activateCoffee();
         this.player.addScore(25);
+        break;
+
+      case "invuln_long":
+        // Sabbatical — massive shield
+        this.player.graceTimer = 12000;
+        this.player.addVisibility(30);
+        this.player.addScore(30);
+        break;
+
+      case "extra_life":
+        // Exit Package — restore one demotion
+        this.player.demotionsRemaining = Math.min(this.player.demotionsRemaining + 1, 3);
+        this.player.addScore(50);
         break;
     }
 
