@@ -1,0 +1,3 @@
+# Cloudflare Pages config
+# Deploy with: npx wrangler pages deploy dist
+name = "ladder-climber"
